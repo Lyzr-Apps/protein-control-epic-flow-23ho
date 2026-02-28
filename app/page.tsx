@@ -4,15 +4,17 @@ import React, { useState } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { FileText, MessageSquare, Target, Activity, Loader2 } from 'lucide-react'
+import { FileText, MessageSquare, Target, Activity, Loader2, Video } from 'lucide-react'
 import ContentGenerator from './sections/ContentGenerator'
 import MetabolicConsultant from './sections/MetabolicConsultant'
 import StrategyLab from './sections/StrategyLab'
+import VideoOptimizer from './sections/VideoOptimizer'
 
 const AGENTS = [
   { id: '69a24ec3f89af5d059caa2dd', name: 'Recipe Content Agent', purpose: 'Blog + Pinterest content generation' },
   { id: '69a24ec3305bea55e2780a4b', name: 'Metabolic Q&A Agent', purpose: 'Metabolic health consultations' },
   { id: '69a24ec46095bea2cef47175', name: 'Strategy Ideation Agent', purpose: 'Content strategy ideation' },
+  { id: '69a2528d6095bea2cef47181', name: 'Video Content Agent', purpose: 'Video title & description optimization' },
 ]
 
 const THEME_VARS = {
@@ -66,12 +68,13 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-type TabKey = 'content' | 'consultant' | 'strategy'
+type TabKey = 'content' | 'consultant' | 'strategy' | 'video'
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'content', label: 'Content Generator', icon: <FileText className="h-4 w-4" /> },
   { key: 'consultant', label: 'Metabolic Consultant', icon: <MessageSquare className="h-4 w-4" /> },
   { key: 'strategy', label: 'Strategy Lab', icon: <Target className="h-4 w-4" /> },
+  { key: 'video', label: 'Video Optimizer', icon: <Video className="h-4 w-4" /> },
 ]
 
 export default function Page() {
@@ -121,6 +124,9 @@ export default function Page() {
           )}
           {activeTab === 'strategy' && (
             <StrategyLab showSample={showSample} setActiveAgentId={setActiveAgentId} />
+          )}
+          {activeTab === 'video' && (
+            <VideoOptimizer showSample={showSample} setActiveAgentId={setActiveAgentId} />
           )}
         </main>
 
