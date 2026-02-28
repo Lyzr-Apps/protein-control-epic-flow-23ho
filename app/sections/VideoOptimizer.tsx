@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Video, Upload, Loader2, Copy, Check, Hash, Search, Type, FileText, X, Image as ImageIcon } from 'lucide-react'
+import { Video, Upload, Loader2, Copy, Check, Hash, Search, Type, FileText, X, Image as ImageIcon, Film } from 'lucide-react'
 
 const VIDEO_AGENT_ID = '69a2528d6095bea2cef47181'
 
@@ -68,9 +68,25 @@ function renderMarkdown(text: string): React.ReactNode {
   })
 }
 
+const ACCEPTED_TYPES = [
+  'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+  'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo',
+]
+
+function isVideoFile(file: File): boolean {
+  return file.type.startsWith('video/')
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default function VideoOptimizer({ showSample, setActiveAgentId }: VideoOptimizerProps) {
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null)
   const [context, setContext] = useState('')
   const [language, setLanguage] = useState('Portuguese')
   const [loading, setLoading] = useState(false)
@@ -78,49 +94,49 @@ export default function VideoOptimizer({ showSample, setActiveAgentId }: VideoOp
   const [response, setResponse] = useState<VideoResponse | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   const displayData: VideoResponse | null = showSample ? SAMPLE_RESPONSE : response
 
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        setImagePreview(ev.target?.result as string)
-      }
-      reader.readAsDataURL(file)
-      setError('')
+  const handleFileSelect = useCallback((file: File) => {
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setError('Formato nao suportado. Use imagens (PNG, JPG, WEBP) ou videos (MP4, MOV, WEBM).')
+      return
     }
+    const isVideo = isVideoFile(file)
+    setMediaFile(file)
+    setMediaType(isVideo ? 'video' : 'image')
+    const url = URL.createObjectURL(file)
+    setMediaPreview(url)
+    setError('')
   }, [])
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFileSelect(file)
+  }, [handleFileSelect])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        setImagePreview(ev.target?.result as string)
-      }
-      reader.readAsDataURL(file)
-      setError('')
-    }
-  }, [])
+    if (file) handleFileSelect(file)
+  }, [handleFileSelect])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
   }, [])
 
-  const removeImage = () => {
-    setImageFile(null)
-    setImagePreview(null)
+  const removeMedia = () => {
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview)
+    setMediaFile(null)
+    setMediaPreview(null)
+    setMediaType(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleGenerate = async () => {
-    if (!imageFile) {
-      setError('Por favor, envie um frame ou thumbnail do video.')
+    if (!mediaFile) {
+      setError('Por favor, envie um video completo ou frame do video.')
       return
     }
 
@@ -130,17 +146,22 @@ export default function VideoOptimizer({ showSample, setActiveAgentId }: VideoOp
     setActiveAgentId(VIDEO_AGENT_ID)
 
     try {
-      // Step 1: Upload the image
-      const uploadResult = await uploadFiles(imageFile)
+      // Step 1: Upload the media file
+      const uploadResult = await uploadFiles(mediaFile)
       if (!uploadResult.success || uploadResult.asset_ids.length === 0) {
-        setError('Falha ao enviar a imagem. Tente novamente.')
+        setError('Falha ao enviar o arquivo. Tente novamente.')
         setLoading(false)
         setActiveAgentId(null)
         return
       }
 
       // Step 2: Call the agent with the asset
-      const message = `Analyze this video frame/thumbnail and generate optimized video titles, descriptions, hashtags, and CTAs.${context ? `\n\nAdditional context about this recipe: ${context}` : ''}${language !== 'English' ? `\n\nPlease generate all content in ${language}.` : ''}`
+      const isVideo = mediaType === 'video'
+      const analysisType = isVideo
+        ? 'Perform FULL MULTIMODAL VIDEO ANALYSIS on this complete video file. Analyze multiple frames across the entire duration. Map the visual narrative: beginning (context), middle (preparation/intervention), end (result/consumption). Detect recurring visual elements, scene changes, food textures, human expressions, behavioral gestures, and food environment. Cross-reference visual + behavioral + metabolic analysis.'
+        : 'Analyze this video frame/thumbnail using full multimodal visual analysis. Detect facial expressions, body language, environment, food type, and visual pain/desire/transformation cues.'
+
+      const message = `${analysisType}\n\nGenerate optimized video titles, descriptions, hashtags, and CTAs based exclusively on what you observe.${context ? `\n\nAdditional context about this recipe: ${context}` : ''}${language !== 'English' ? `\n\nGenerate all content in ${language}.` : ''}`
 
       const result = await callAIAgent(message, VIDEO_AGENT_ID, {
         assets: uploadResult.asset_ids,
@@ -187,50 +208,97 @@ export default function VideoOptimizer({ showSample, setActiveAgentId }: VideoOp
         <div>
           <h2 className="font-serif text-2xl font-bold tracking-tight mb-1">Video Optimizer</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Envie um frame ou thumbnail do seu video de receita. O agente analisa a imagem e gera titulos, descricoes e hashtags otimizados com foco na dor do espectador.
+            Envie o video completo (MP4, MOV, WEBM) ou um frame/thumbnail. O agente realiza analise multimodal completa — detectando narrativa visual, expressoes, texturas alimentares e padroes comportamentais para gerar conteudo unico e personalizado.
           </p>
         </div>
 
         <Separator />
 
-        {/* Image Upload */}
+        {/* Media Upload */}
         <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase tracking-wider">Frame do Video / Thumbnail</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wider">Video Completo ou Frame</Label>
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            onClick={() => !imagePreview && fileInputRef.current?.click()}
-            className={`border-2 border-dashed border-border bg-secondary/30 flex flex-col items-center justify-center min-h-[180px] cursor-pointer transition-colors hover:border-muted-foreground relative ${imagePreview ? 'p-2' : 'p-6'}`}
+            onClick={() => !mediaPreview && fileInputRef.current?.click()}
+            className={`border-2 border-dashed border-border bg-secondary/30 flex flex-col items-center justify-center min-h-[180px] cursor-pointer transition-colors hover:border-muted-foreground relative ${mediaPreview ? 'p-2' : 'p-6'}`}
           >
-            {imagePreview ? (
+            {mediaPreview && mediaType === 'video' ? (
+              <div className="relative w-full">
+                <video
+                  ref={videoRef}
+                  src={mediaPreview}
+                  className="w-full max-h-[200px] object-contain"
+                  controls
+                  muted
+                  preload="metadata"
+                />
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeMedia() }}
+                  className="absolute top-1 right-1 bg-foreground/80 text-background p-1 hover:bg-foreground transition-colors z-10"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    <Film className="h-3 w-3 mr-1" />
+                    Video
+                  </Badge>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {mediaFile ? formatFileSize(mediaFile.size) : ''}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs text-green-700 border-green-300">
+                    Analise multimodal completa
+                  </Badge>
+                </div>
+              </div>
+            ) : mediaPreview && mediaType === 'image' ? (
               <div className="relative w-full">
                 <img
-                  src={imagePreview}
+                  src={mediaPreview}
                   alt="Preview do frame"
                   className="w-full h-auto max-h-[200px] object-contain"
                 />
                 <button
-                  onClick={(e) => { e.stopPropagation(); removeImage() }}
+                  onClick={(e) => { e.stopPropagation(); removeMedia() }}
                   className="absolute top-1 right-1 bg-foreground/80 text-background p-1 hover:bg-foreground transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    <ImageIcon className="h-3 w-3 mr-1" />
+                    Frame
+                  </Badge>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {mediaFile ? formatFileSize(mediaFile.size) : ''}
+                  </Badge>
+                </div>
               </div>
             ) : (
               <>
-                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                <div className="flex items-center gap-3 mb-2">
+                  <Film className="h-7 w-7 text-muted-foreground" />
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <ImageIcon className="h-7 w-7 text-muted-foreground" />
+                </div>
                 <p className="text-sm text-muted-foreground text-center">
                   Arraste e solte aqui ou clique para selecionar
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  MP4, MOV, WEBM, PNG, JPG, WEBP
+                </p>
+                <p className="text-xs text-accent mt-2 font-medium">
+                  Video completo = analise multimodal profunda
+                </p>
               </>
             )}
           </div>
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
-            onChange={handleImageSelect}
+            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+            onChange={handleInputChange}
             className="hidden"
           />
         </div>
@@ -267,13 +335,13 @@ export default function VideoOptimizer({ showSample, setActiveAgentId }: VideoOp
         {/* Generate Button */}
         <Button
           onClick={handleGenerate}
-          disabled={loading || !imageFile}
+          disabled={loading || !mediaFile}
           className="w-full bg-foreground text-background hover:bg-foreground/90 font-semibold text-sm py-5"
         >
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Analisando frame...
+              {mediaType === 'video' ? 'Analisando video completo...' : 'Analisando frame...'}
             </>
           ) : (
             <>
@@ -293,10 +361,16 @@ export default function VideoOptimizer({ showSample, setActiveAgentId }: VideoOp
         {!displayData ? (
           <div className="h-full flex items-center justify-center border border-dashed border-border bg-secondary/20">
             <div className="text-center max-w-sm">
-              <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-serif text-lg font-semibold mb-2">Envie um Frame do Video</h3>
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <Film className="h-10 w-10 text-muted-foreground" />
+                <ImageIcon className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="font-serif text-lg font-semibold mb-2">Envie seu Video ou Frame</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Selecione um frame ou thumbnail do seu video de receita e clique em &quot;Gerar Conteudo&quot; para criar titulos, descricoes e hashtags otimizados.
+                Envie o video completo para analise multimodal profunda (narrativa visual, expressoes, texturas, comportamento) ou um frame/thumbnail para analise visual.
+              </p>
+              <p className="text-xs text-accent mt-3 font-medium">
+                Video completo = analise temporal completa com maior precisao
               </p>
             </div>
           </div>
