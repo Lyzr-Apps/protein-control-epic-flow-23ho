@@ -1,0 +1,18 @@
+{
+  "agent_name": "Metabolic Q&A Agent",
+  "agent_id": "69a24ec3305bea55e2780a4b",
+  "description": "Conversational consultant that answers questions about metabolism, satiety (GLP-1/ghrelin), glycemic stability, hunger control, and dietary structure. Suggests 7/14/21-day challenge sequences with biological milestones. Responds with empathy, scientific backing, and strategic positioning. Multilingual.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "answer": "string",
+    "key_takeaways": "string",
+    "follow_up_suggestions": "string"
+  },
+  "example_response": {
+    "answer": "sample string",
+    "key_takeaways": "sample string",
+    "follow_up_suggestions": "sample string"
+  }
+}

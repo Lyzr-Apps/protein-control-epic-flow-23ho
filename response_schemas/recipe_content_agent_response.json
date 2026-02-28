@@ -1,0 +1,30 @@
+{
+  "agent_name": "Recipe Content Agent",
+  "agent_id": "69a24ec3f89af5d059caa2dd",
+  "description": "Generates complete structured blog posts including Pinterest title, headline with physiological promise, meta description with CTA, full post (metabolic intro, recipe, macros, weekly sustainability connection, strategic closing), all following the brand voice of metabolic authority education. Multilingual output supported.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "pinterest_title": "string",
+    "blog_headline": "string",
+    "meta_description": "string",
+    "metabolic_introduction": "string",
+    "recipe_ingredients": "string",
+    "recipe_instructions": "string",
+    "macro_breakdown": "string",
+    "weekly_sustainability": "string",
+    "strategic_closing": "string"
+  },
+  "example_response": {
+    "pinterest_title": "sample string",
+    "blog_headline": "sample string",
+    "meta_description": "sample string",
+    "metabolic_introduction": "sample string",
+    "recipe_ingredients": "sample string",
+    "recipe_instructions": "sample string",
+    "macro_breakdown": "sample string",
+    "weekly_sustainability": "sample string",
+    "strategic_closing": "sample string"
+  }
+}

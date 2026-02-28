@@ -1,0 +1,20 @@
+{
+  "agent_name": "Strategy Ideation Agent",
+  "agent_id": "69a24ec46095bea2cef47175",
+  "description": "Generates content strategy ideas including Pinterest angle suggestions, blog post themes, challenge frameworks, seasonal content calendars, and engagement hooks \u2014 all aligned with metabolic authority positioning and ebook conversion funnel. Multilingual.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "ideas": "string",
+    "strategy_summary": "string",
+    "platform_recommendations": "string",
+    "next_steps": "string"
+  },
+  "example_response": {
+    "ideas": "sample string",
+    "strategy_summary": "sample string",
+    "platform_recommendations": "sample string",
+    "next_steps": "sample string"
+  }
+}
